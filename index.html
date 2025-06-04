@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebRTC 360° Viewer Test (リファクタリング版)</title>
+  <style>
+    body { 
+      font-family: sans-serif; 
+      line-height: 1.8;
+      margin: 1em;
+    }
+    #senderControls, #receiverControls, #callControls {
+      margin-bottom: 5px;
+    }
+    video {
+      background-color: black;
+      border: 1px solid #ccc;
+    }
+    #localVideo {
+      width: 480px;
+      height: 270px;
+      object-fit: cover;
+    }
+    /* remoteVideoはThree.jsのテクスチャとして利用するため非表示 */
+    #remoteVideo, #localVideo {
+      display: none;
+    }
+    #statsControls {
+      margin-top: 20px;
+      padding-top: 15px;
+    }
+    #statsDisplay {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #555;
+      min-height: 20px;
+    }
+    button {
+        cursor: pointer;
+        padding: 8px 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background-color: #f0f0f0;
+    }
+    button:disabled {
+        cursor: not-allowed;
+        background-color: #e0e0e0;
+        color: #999;
+    }
+    #hangUpBtn {
+        background-color: #ff4d4d;
+        color: white;
+        border-color: #ff4d4d;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <label><input type="radio" name="role" value="sender" checked>送信</label>
+    <label><input type="radio" name="role" value="receiver">受信 (360°ビュー)</label>
+  </div>
+
+  <div id="senderControls" style="display: block;">
+    <label for="resolution">解像度:</label>
+    <select id="resolution">
+      <option value="fourK">3840x1920</option>
+    </select>
+
+    <label for="codecSelect">コーデック:</label>
+    <select id="codecSelect">
+      <option value="VP8">VP8</option>
+      <option value="VP9">VP9</option>
+      <option value="H264">H264</option>
+      <option value="AV1">AV1</option>
+    </select>
+
+    <button id="startCamera">カメラ開始 & 通話作成</button>
+  </div>
+
+  <div id="receiverControls" style="display: none;">
+    <input id="callIdInput" placeholder="Call ID を入力" />
+    <button id="joinCall">通話に参加</button>
+  </div>
+  
+  <div id="callControls" style="display: none;">
+      <strong>Call ID:</strong> <span id="callIdDisplay"></span>
+      <button id="copyCallId">コピー</button>
+      <button id="hangUpBtn" style="margin-left: 20px;">通話を切る</button>
+  </div>
+
+  <div id="videoArea">
+      <video id="localVideo" autoplay playsinline muted></video>
+      <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+
+  <div id="statsControls" style="display: none;">
+    <h3>統計情報記録</h3>
+    <button id="startStatsRecording">記録開始</button>
+    <button id="stopStatsRecording" disabled>記録停止</button>
+    <button id="downloadStats" disabled>CSVダウンロード</button>
+    <div id="statsDisplay"></div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
