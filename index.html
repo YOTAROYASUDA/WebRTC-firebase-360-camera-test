@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/WebRTC-firebase-test/assets/favicon-C49brna2.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC firebase </title>
-    <script type="module" crossorigin src="/WebRTC-firebase-test/assets/index-DewP5ssv.js"></script>
+    <script type="module" crossorigin src="/WebRTC-firebase-test/assets/index-eYW2WbBJ.js"></script>
     <link rel="stylesheet" crossorigin href="/WebRTC-firebase-test/assets/index-Ej0Jg0cO.css">
   </head>
   <body>
@@ -14,7 +14,7 @@
     <button id="receiverButton">Receiver</button>
 
     <h2>2. Start Camera & Coms</h2>
-    <div class="videos">
+    <div id="localResolutionDisplay">Local Resolution: N/A</div> <div class="videos">
       <span>
         <h3 id="locStream">Local Stream</h3>
         <video id="webcamVideo" autoplay playsinline></video>
@@ -23,8 +23,6 @@
         <h3 id="remStream">Remote Stream</h3>
         <video id="remoteVideo" autoplay playsinline></video>
       </span>
-
-
     </div>
 
     <button id="webcamButton">Start Coms</button>
