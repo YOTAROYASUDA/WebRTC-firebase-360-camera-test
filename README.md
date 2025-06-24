@@ -1,1 +1,1 @@
-https://yotaroyasuda.github.io/WebRTC-firebase-stun/
+https://yotaroyasuda.github.io/WebRTC-firebase-test/
