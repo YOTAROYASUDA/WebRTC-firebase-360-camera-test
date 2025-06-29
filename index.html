@@ -13,7 +13,7 @@
     #hangup { margin-top: 15px; background-color: #dc3545; color: white; border: none; padding: 10px; cursor: pointer; }
     #hangup:disabled { background-color: #6c757d; }
   </style>
-  <script type="module" crossorigin src="/WebRTC-firebase-360-camera-test/assets/index-B0_U8ZYa.js"></script>
+  <script type="module" crossorigin src="/WebRTC-firebase-360-camera-test/assets/index-BmDJ3Dxm.js"></script>
 </head>
 <body>
   <h2>WebRTC 360° Viewer</h2>
@@ -26,9 +26,7 @@
   <div id="senderControls">
     <label for="resolution">解像度:</label>
     <select id="resolution">
-      <option value="hd">1280x720</option>
-      <option value="fhd">1920x1080</option>
-      <option value="fourK">3840x2160</option>
+      <option value="fourK">3840x1920</option>
     </select>
 
     <label for="codecSelect">コーデック:</label>
@@ -43,7 +41,6 @@
     
     <div>
       <p>通話ID: <strong id="callIdDisplay"></strong> <button id="copyCallId">コピー</button></p>
-      <div id="localResolutionDisplay"></div>
     </div>
     <video id="localVideo" autoplay playsinline muted></video>
   </div>
