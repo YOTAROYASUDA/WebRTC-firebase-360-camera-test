@@ -1,1 +1,1 @@
-https://yotaroyasuda.github.io/WebRTC-firebase-test/
+https://yotaroyasuda.github.io/WebRTC-firebase-360-camera-test/
