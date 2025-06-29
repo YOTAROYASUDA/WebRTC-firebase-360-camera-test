@@ -1,46 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/WebRTC-firebase-test/assets/favicon-C49brna2.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC firebase </title>
-    <script type="module" crossorigin src="/WebRTC-firebase-test/assets/index-eYW2WbBJ.js"></script>
-    <link rel="stylesheet" crossorigin href="/WebRTC-firebase-test/assets/index-Ej0Jg0cO.css">
-  </head>
-  <body>
-    <h2>1. Select Sender or Receiver</h2>
-    <button id="senderButton">Sender</button>
-    <button id="receiverButton">Receiver</button>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebRTC 360° Viewer Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    video { background-color: black; }
+    #localVideo { width: 480px; height: 270px; }
+    /* remoteVideoはThree.jsによって全画面表示されるため非表示 */
+    #remoteVideo { display: none; }
+    div { margin-bottom: 10px; }
+    #hangup { margin-top: 15px; background-color: #dc3545; color: white; border: none; padding: 10px; cursor: pointer; }
+    #hangup:disabled { background-color: #6c757d; }
+  </style>
+  <script type="module" crossorigin src="/WebRTC-firebase-360-camera-test/assets/index-B0_U8ZYa.js"></script>
+</head>
+<body>
+  <h2>WebRTC 360° Viewer</h2>
 
-    <h2>2. Start Camera & Coms</h2>
-    <div id="localResolutionDisplay">Local Resolution: N/A</div> <div class="videos">
-      <span>
-        <h3 id="locStream">Local Stream</h3>
-        <video id="webcamVideo" autoplay playsinline></video>
-      </span>
-      <span>
-        <h3 id="remStream">Remote Stream</h3>
-        <video id="remoteVideo" autoplay playsinline></video>
-      </span>
-    </div>
+  <div>
+    <label><input type="radio" name="role" value="sender" checked>送信者</label>
+    <label><input type="radio" name="role" value="receiver">受信者 (360°ビュー)</label>
+  </div>
 
-    <button id="webcamButton">Start Coms</button>
-    <h2>3. Create a new Call</h2>
-    <button id="callButton" disabled>Create Call (offer)</button>
+  <div id="senderControls">
+    <label for="resolution">解像度:</label>
+    <select id="resolution">
+      <option value="hd">1280x720</option>
+      <option value="fhd">1920x1080</option>
+      <option value="fourK">3840x2160</option>
+    </select>
 
-    <h2>4. Join a Call</h2>
-    <p>Answer the call from a different browser window or device</p>
+    <label for="codecSelect">コーデック:</label>
+    <select id="codecSelect">
+      <option value="VP8">VP8</option>
+      <option value="VP9">VP9</option>
+      <option value="H264">H264</option>
+      <option value="AV1">AV1</option>
+    </select>
     
-    <input id="callInput" />
-    <button id="answerButton" disabled>Answer</button>
+    <button id="startCall">通話開始</button>
+    
+    <div>
+      <p>通話ID: <strong id="callIdDisplay"></strong> <button id="copyCallId">コピー</button></p>
+      <div id="localResolutionDisplay"></div>
+    </div>
+    <video id="localVideo" autoplay playsinline muted></video>
+  </div>
 
-    <h2>5. Hangup</h2>
+  <div id="receiverControls" style="display: none;">
+    <input id="callIdInput" placeholder="通話IDを入力" />
+    <button id="joinCall">通話に参加</button>
+  </div>
 
-    <button id="hangupButton" disabled>Hangup</button>
+  <button id="hangup" disabled>通話終了</button>
 
-    <div> </div>
-
-
-  </body>
+  <video id="remoteVideo" autoplay playsinline></video>
+  
+</body>
 </html>
