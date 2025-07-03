@@ -211,7 +211,7 @@ function startStatsRecording() {
       
       if (Object.keys(dataToRecord).length > 1) {
           recordedStats.push(dataToRecord);
-          statsDisplay.textContent = `記録中... ${recordedStats.length} 件`;
+          statsDisplay.textContent = `記録中... ${recordedStats.length} 個`;
       }
 
       lastReport = stats; // 次の計算のために現在のレポートを保持
