@@ -43,7 +43,7 @@ let camera, scene, renderer, controls;
 let statsInterval;
 let recordedStats = [];
 let isRecording = false;
-let lastReport = null; // ビットレート計算用に前回のレポートを保持
+let lastReport = null;
 
 const resolutions = {
   fourK: { width: 3840, height: 1920 }
@@ -66,10 +66,10 @@ function setupConnection() {
 
   peerConnection.onconnectionstatechange = () => {
     if (peerConnection.connectionState === 'connected') {
-        statsControls.style.display = 'block'; // 接続されたら統計コントロールを表示
+        statsControls.style.display = 'block';
     } else if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) {
         statsControls.style.display = 'none';
-        stopStatsRecording(); // 接続が切れたら記録も停止
+        stopStatsRecording();
     }
   };
 }
@@ -102,10 +102,10 @@ async function hangUp() {
     localStream = null;
   }
   if (callDocRef) {
-    await deleteDoc(callDocRef).catch(e => console.error("ドキュメント削除エラー: ", e)); // Firestoreのドキュメントを削除
+    await deleteDoc(callDocRef).catch(e => console.error("ドキュメント削除エラー: ", e));
     callDocRef = null;
   }
-  
+
   resetUI();
 }
 
@@ -120,149 +120,128 @@ function resetUI() {
     callIdDisplay.textContent = "";
     callIdInput.value = "";
     copyCallIdBtn.textContent = "コピー";
-    
+
     startCameraBtn.disabled = false;
     joinCallBtn.disabled = false;
 
-    // 3Dビューワーのリソースを解放
     if (renderer) {
       renderer.dispose();
-      // bodyからcanvas要素（コンテナ）を削除する
       if (renderer.domElement.parentNode) {
         document.body.removeChild(renderer.domElement);
       }
       renderer = null; camera = null; scene = null; controls = null;
     }
 
-    // 統計UIをリセット
     statsDisplay.textContent = "";
     recordedStats = [];
     isRecording = false;
-    lastReport = null; // lastReportもリセット
+    lastReport = null;
     startStatsRecordingBtn.disabled = false;
     stopStatsRecordingBtn.disabled = true;
     downloadStatsBtn.disabled = true;
 }
 
-/**
- * 統計情報の収集を開始する
- */
+// ========================================================================
+// === 統計情報関連 (ここからが更新されたセクションです) ===
+// ========================================================================
+
 function startStatsRecording() {
   if (!peerConnection || isRecording) return;
 
   isRecording = true;
-  recordedStats = []; // 新しい記録セッションのためにクリア
-  lastReport = null; // 記録開始時にリセット
+  recordedStats = [];
+  lastReport = null;
 
   startStatsRecordingBtn.disabled = true;
   stopStatsRecordingBtn.disabled = false;
-  downloadStatsBtn.disabled = true; // 記録中はダウンロード不可に
+  downloadStatsBtn.disabled = true;
 
   statsDisplay.textContent = "記録中...";
 
   statsInterval = setInterval(async () => {
     if (!peerConnection) return;
     const stats = await peerConnection.getStats();
-    const currentTime = new Date().toISOString();
-    let dataToRecord = { timestamp: currentTime };
+    const dataToRecord = { timestamp: new Date().toISOString() };
 
-    // --- 送信側の統計 (Sender Role) ---
     if (currentRole === "sender") {
       stats.forEach(report => {
-        // 送信映像ストリームに関する情報
+        // --- 送信側の映像品質 ---
         if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
+          const lastOutboundReport = lastReport?.get(report.id);
+          const bytesSent = report.bytesSent - (lastOutboundReport?.bytesSent ?? 0);
+          const packetsSent = report.packetsSent - (lastOutboundReport?.packetsSent ?? 0);
+          
           dataToRecord.sent_resolution = `${report.frameWidth}x${report.frameHeight}`;
           dataToRecord.sent_fps = report.framesPerSecond;
+          dataToRecord.sent_bitrate_kbps = Math.round((Math.max(0, bytesSent) * 8) / 1000);
+          dataToRecord.packets_sent_per_second = Math.max(0, packetsSent);
           dataToRecord.total_encode_time_s = report.totalEncodeTime;
           dataToRecord.keyframes_encoded = report.keyFramesEncoded;
           dataToRecord.quality_limitation_reason = report.qualityLimitationReason;
-          
-          if (lastReport) {
-            const lastOutboundReport = lastReport.get(report.id);
-            if (lastOutboundReport && typeof lastOutboundReport.bytesSent === 'number') {
-              const bytesSent = report.bytesSent - lastOutboundReport.bytesSent;
-              dataToRecord.sent_bitrate_kbps = Math.round((Math.max(0, bytesSent) * 8) / 1000);
-              
-              const packetsSent = report.packetsSent - lastOutboundReport.packetsSent;
-              dataToRecord.packets_sent_per_second = Math.max(0, packetsSent);
-            } else {
-              dataToRecord.sent_bitrate_kbps = 0;
-              dataToRecord.packets_sent_per_second = 0;
-            }
-          } else {
-            dataToRecord.sent_bitrate_kbps = 0;
-            dataToRecord.packets_sent_per_second = 0;
-          }
+          // === 追加された項目 ===
+          dataToRecord.quality_limitation_resolution_changes = report.qualityLimitationResolutionChanges;
+          dataToRecord.retransmitted_packets_sent = report.retransmittedPacketsSent;
+          dataToRecord.nack_count = report.nackCount;
         }
-        // 受信側からフィードバックされるリモート統計情報
+        // --- 受信側からのフィードバック ---
         if (report.type === 'remote-inbound-rtp' && report.mediaType === 'video') {
-            dataToRecord.receiver_jitter_ms = report.jitter !== undefined ? (report.jitter * 1000).toFixed(3) : 'N/A';
+            dataToRecord.receiver_jitter_ms = (report.jitter * 1000)?.toFixed(3) ?? 'N/A';
             dataToRecord.receiver_packets_lost = report.packetsLost;
             dataToRecord.receiver_fraction_lost = report.fractionLost;
-            dataToRecord.rtt_rtcp_ms = report.roundTripTime !== undefined ? (report.roundTripTime * 1000).toFixed(3) : 'N/A';
+            dataToRecord.rtt_rtcp_ms = (report.roundTripTime * 1000)?.toFixed(3) ?? 'N/A';
         }
-        // 接続経路に関する情報
+        // --- 接続品質 --
         if (report.type === 'candidate-pair' && report.nominated && report.state === 'succeeded') {
             dataToRecord.available_outgoing_bitrate_kbps = report.availableOutgoingBitrate ? Math.round(report.availableOutgoingBitrate / 1000) : 'N/A';
-            dataToRecord.rtt_ice_ms = report.currentRoundTripTime !== undefined ? (report.currentRoundTripTime * 1000).toFixed(3) : 'N/A';
+            dataToRecord.rtt_ice_ms = (report.currentRoundTripTime * 1000)?.toFixed(3) ?? 'N/A';
         }
       });
-    }
-    // --- 受信側の統計 (Receiver Role) ---
-    else {
+    } else { // 受信側の処理
       stats.forEach(report => {
-        // 受信映像ストリームに関する情報
         if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+          const lastInboundReport = lastReport?.get(report.id);
+          const bytesReceived = report.bytesReceived - (lastInboundReport?.bytesReceived ?? 0);
+          const packetsReceived = report.packetsReceived - (lastInboundReport?.packetsReceived ?? 0);
+
           dataToRecord.received_resolution = `${report.frameWidth}x${report.frameHeight}`;
           dataToRecord.received_fps = report.framesPerSecond;
-          dataToRecord.jitter_ms = report.jitter !== undefined ? (report.jitter * 1000).toFixed(3) : 'N/A';
+          dataToRecord.received_bitrate_kbps = Math.round((Math.max(0, bytesReceived) * 8) / 1000);
+          dataToRecord.packets_received_per_second = Math.max(0, packetsReceived);
+          dataToRecord.jitter_ms = (report.jitter * 1000)?.toFixed(3) ?? 'N/A';
           dataToRecord.packets_lost = report.packetsLost;
           dataToRecord.frames_dropped = report.framesDropped;
           dataToRecord.total_decode_time_s = report.totalDecodeTime;
           dataToRecord.keyframes_decoded = report.keyFramesDecoded;
           dataToRecord.jitter_buffer_delay_s = report.jitterBufferDelay;
-          
-          if (lastReport) {
-            const lastInboundReport = lastReport.get(report.id);
-            if (lastInboundReport && typeof lastInboundReport.bytesReceived === 'number') {
-              const bytesReceived = report.bytesReceived - lastInboundReport.bytesReceived;
-              dataToRecord.received_bitrate_kbps = Math.round((Math.max(0, bytesReceived) * 8) / 1000);
-
-              const packetsReceived = report.packetsReceived - lastInboundReport.packetsReceived;
-              dataToRecord.packets_received_per_second = Math.max(0, packetsReceived);
-            } else {
-              dataToRecord.received_bitrate_kbps = 0;
-              dataToRecord.packets_received_per_second = 0;
-            }
-          } else {
-            dataToRecord.received_bitrate_kbps = 0;
-            dataToRecord.packets_received_per_second = 0;
-          }
+          // === 追加された項目 ===
+          dataToRecord.fir_count = report.firCount;
+          dataToRecord.pli_count = report.pliCount;
+          dataToRecord.jitter_buffer_emitted_count = report.jitterBufferEmittedCount;
         }
       });
     }
 
-    // 記録するデータがタイムスタンプ以外にあれば追加
     if (Object.keys(dataToRecord).length > 1) {
       recordedStats.push(dataToRecord);
       statsDisplay.textContent = `記録中... ${recordedStats.length} 個`;
     }
 
-    // 次の計算のために現在のレポートを保持
     lastReport = stats;
-
-  }, 1000); // 1秒ごとに統計情報を取得
+  }, 1000);
 }
+
+// ========================================================================
+// === (更新されたセクションはここまでです) ===
+// ========================================================================
 
 function stopStatsRecording() {
   if (!isRecording) return;
   clearInterval(statsInterval);
   isRecording = false;
-  lastReport = null; // 状態をリセット
+  lastReport = null;
 
   startStatsRecordingBtn.disabled = false;
   stopStatsRecordingBtn.disabled = true;
-  // 修正箇所: recordedStatsの件数が0の場合にのみ、ボタンを無効化する
   downloadStatsBtn.disabled = recordedStats.length === 0;
   statsDisplay.textContent = `記録停止。合計 ${recordedStats.length} 件。`;
 }
@@ -351,7 +330,7 @@ startCameraBtn.onclick = async () => {
           peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
       });
-      
+
       onSnapshot(answerCandidates, snapshot => {
         snapshot.docChanges().forEach(change => {
           if (change.type === "added") peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
@@ -407,7 +386,7 @@ joinCallBtn.onclick = async () => {
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         await updateDoc(callDocRef, { answer });
-        
+
         callIdDisplay.textContent = callDocRef.id;
         callControls.style.display = "block";
 
@@ -440,22 +419,31 @@ function init3DView() {
 
   const texture = new THREE.VideoTexture(remoteVideo);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  renderer = new THREE.WebGLRenderer();
+  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.anisotropy = maxAnisotropy;
 
   const geometry = new THREE.SphereGeometry(100, 64, 64);
   geometry.scale(-1, 1, 1);
   const material = new THREE.MeshBasicMaterial({ map: texture });
   scene.add(new THREE.Mesh(geometry, material));
 
-  renderer = new THREE.WebGLRenderer();
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.domElement.style.zIndex = '1000'; // プレビューより後ろに表示
+  renderer.domElement.style.zIndex = '1000';
   document.body.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
+  // OrbitControls標準のズーム機能を有効にする
   controls.enableZoom = true;
+  controls.zoomSpeed = 5.0; 
+  controls.minDistance = 1;
+  controls.maxDistance = 100;
   controls.enablePan = false;
-  
+
   window.addEventListener('resize', onWindowResize, false);
 }
 
@@ -468,7 +456,7 @@ function onWindowResize() {
 }
 
 function animate3DView() {
-  if (renderer) { 
+  if (renderer) {
     requestAnimationFrame(animate3DView);
     controls.update();
     renderer.render(scene, camera);
